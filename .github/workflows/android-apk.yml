@@ -1,0 +1,31 @@
+name: Build Anyo Arena APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Anyo_Arena_Android_Source.zip'
+      - '.github/workflows/android-apk.yml'
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract game source
+        run: unzip -o Anyo_Arena_Android_Source.zip -d .
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - run: gradle --no-daemon -p android assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Anyo-Arena-Android-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
