@@ -10,6 +10,7 @@ from aiohttp import web, WSMsgType
 
 ROOT = Path(__file__).parent
 rooms = {}
+ARENAS = {"rain", "port", "fiesta", "temple", "hall", "valley", "market", "nemsu_gate", "nemsu_plaza"}
 
 
 def fighter(name, team, avatar="", style="neon"):
@@ -160,7 +161,10 @@ async def ws_handler(request):
                     code = "".join(random.choices("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", k=5))
                     while code in rooms:
                         code = "".join(random.choices("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", k=5))
-                    room = rooms[code] = dict(code=code, mode=mode, arena=data.get("arena", "rain"),
+                    arena = data.get("arena", "rain")
+                    if arena not in ARENAS:
+                        arena = "rain"
+                    room = rooms[code] = dict(code=code, mode=mode, arena=arena,
                         phase="lobby", timer=75, scores=[0, 0], message="WAITING FOR PLAYERS", players=[])
                 else:
                     room = rooms.get(str(data.get("code", "")).upper().strip())
@@ -209,6 +213,13 @@ async def index(request):
     return web.FileResponse(ROOT / "index.html")
 
 
+async def fighter_art(request):
+    name = request.match_info["name"]
+    if name not in {"hero.png", "rival.png", "temple.webp", "hall.webp", "valley.webp", "market.webp", "nemsu_gate.webp", "nemsu_plaza.webp"}:
+        raise web.HTTPNotFound()
+    return web.FileResponse(ROOT / "assets" / name)
+
+
 async def start_app(app):
     app["ticker"] = asyncio.create_task(loop())
 
@@ -219,6 +230,7 @@ async def stop_app(app):
 
 app = web.Application()
 app.router.add_get("/", index)
+app.router.add_get("/assets/{name}", fighter_art)
 app.router.add_get("/ws", ws_handler)
 app.on_startup.append(start_app)
 app.on_cleanup.append(stop_app)
